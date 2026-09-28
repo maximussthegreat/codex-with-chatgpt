@@ -4,6 +4,7 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { startBridge } from "../bridge/server.js";
+import { startStdio } from "../mcp/stdio.js";
 import { findBridgeObservation, findLiveBridge, type RuntimeState } from "../bridge/runtime.js";
 import { adminFetch, ensureBridge, stopBridge } from "../process/daemon.js";
 import { Workspace } from "../workspace/manager.js";
@@ -226,6 +227,18 @@ function acceptUnusedWorkspaceOption(command: Command): Command {
 }
 
 // ---------------------------------------------------------------- serve (internal)
+
+program
+  .command("stdio")
+  .description("Serve read-only MCP over private stdin/stdout without a listener or tunnel")
+  .requiredOption("-w, --workspace <path>", "workspace root")
+  .action(async (opts: { workspace: string }) => {
+    const server = await startStdio(resolveWorkspace(opts.workspace));
+    const close = () => { void server.close(); };
+    process.once("SIGINT", close);
+    process.once("SIGTERM", close);
+    process.stdin.once("end", close);
+  });
 
 program
   .command("serve", { hidden: true })

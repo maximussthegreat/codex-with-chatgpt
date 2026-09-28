@@ -77,6 +77,33 @@ afterAll(async () => {
 });
 
 describe("MCP tools over Streamable HTTP", () => {
+  it("returns a parseable chunked authentication challenge", async () => {
+    const response = await fetch(`${bridge.localBaseUrl()}/mcp`);
+    expect(response.status).toBe(401);
+    expect(response.headers.get("www-authenticate")).toContain("Missing bearer token");
+    expect(response.headers.get("content-length")).toBeNull();
+    expect(response.headers.get("transfer-encoding")).toBe("chunked");
+    expect(await response.json()).toMatchObject({ error: "unauthorized" });
+  });
+
+  it("keeps method errors readable after authentication", async () => {
+    const response = await fetch(`${bridge.localBaseUrl()}/mcp`, {
+      headers: { authorization: `Bearer ${accessToken}` },
+    });
+    expect(response.status).toBe(405);
+    expect(await response.json()).toMatchObject({ error: { message: "Method not allowed. Use POST." } });
+  });
+
+  it("keeps malformed request errors readable", async () => {
+    const response = await fetch(`${bridge.localBaseUrl()}/mcp`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{invalid",
+    });
+    expect(response.status).toBe(400);
+    expect(await response.text()).toContain("SyntaxError");
+  });
+
   it("lists all ten read-only tools", async () => {
     const { tools } = await client.listTools();
     const names = tools.map((tool) => tool.name).sort();

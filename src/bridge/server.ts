@@ -8,6 +8,7 @@ import { bearerAuth } from "../auth/middleware.js";
 import { PairingManager } from "../pairing/manager.js";
 import { createMcpServer } from "../mcp/server.js";
 import { createMcpHttpHandler } from "../mcp/http.js";
+import { chunkMcpResponses } from "../mcp/framing.js";
 import { CloudflaredQuickTunnel } from "../tunnel/cloudflared.js";
 import { CloudflaredNamedTunnel } from "../tunnel/cloudflared-named.js";
 import type { TunnelProvider } from "../tunnel/provider.js";
@@ -113,6 +114,7 @@ export async function startBridge(opts: BridgeOptions): Promise<Bridge> {
 
   // ---- OAuth + discovery ---------------------------------------------------
 
+  app.use("/.well-known/oauth-protected-resource/mcp", chunkMcpResponses);
   app.use(
     createOAuthRouter({
       store: authStore,
@@ -128,6 +130,7 @@ export async function startBridge(opts: BridgeOptions): Promise<Bridge> {
   const mcpHandler = createMcpHttpHandler(() => createMcpServer({ workspace, logger }), logger);
   app.all(
     "/mcp",
+    chunkMcpResponses,
     express.json({ limit: "8mb" }),
     bearerAuth({ store: authStore, workspaceId: workspace.id, getBaseUrl, logger }),
     (req: Request, res: Response) => {
