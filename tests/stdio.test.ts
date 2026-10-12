@@ -19,7 +19,7 @@ describe("private stdio CLI", () => {
     });
     try {
       await client.connect(transport);
-      expect((await client.listTools()).tools).toHaveLength(9);
+      expect((await client.listTools()).tools).toHaveLength(10);
       const info = await client.callTool({ name: "workspace_info", arguments: {} });
       expect(info.isError).not.toBe(true);
       expect(info.structuredContent).toMatchObject({ workspaceName: path.basename(root) });
